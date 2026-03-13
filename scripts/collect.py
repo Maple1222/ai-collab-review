@@ -698,7 +698,7 @@ def main():
     parser.add_argument("--output", type=str, default=None,
                         help="出力先ファイルパス（省略時は標準出力）")
     parser.add_argument("--import-file", type=str, default=None,
-                        help="エクスポートファイルをインポート（ChatGPT/Claude.ai/Gemini JSON）")
+                        help="エクスポートファイルまたはディレクトリをインポート（ChatGPT/Claude.ai/Gemini JSON）")
     args = parser.parse_args()
 
     cutoff_ms = None
@@ -712,14 +712,40 @@ def main():
         if not import_path.exists():
             print(f"Error: file not found: {args.import_file}", file=sys.stderr)
             sys.exit(1)
-        source = detect_and_parse_import(import_path)
-        if source is None:
-            print("Error: unsupported file format", file=sys.stderr)
-            sys.exit(1)
-        # cutoff フィルタ
-        if cutoff_ms:
-            source["messages"] = [m for m in source["messages"] if m.get("timestamp_ms", 0) >= cutoff_ms]
-        sources = [source]
+
+        if import_path.is_dir():
+            # ディレクトリ一括読込: .json ファイルを再帰走査
+            sources = []
+            parsed_count = 0
+            skipped_files = []
+            for json_file in sorted(import_path.rglob("*.json")):
+                source = detect_and_parse_import(json_file)
+                if source and source["messages"]:
+                    if cutoff_ms:
+                        source["messages"] = [
+                            m for m in source["messages"]
+                            if m.get("timestamp_ms", 0) >= cutoff_ms
+                        ]
+                    sources.append(source)
+                    parsed_count += 1
+                else:
+                    skipped_files.append(json_file.name)
+            if not sources:
+                print(f"Error: no parseable JSON files found in {args.import_file}", file=sys.stderr)
+                if skipped_files:
+                    print(f"Skipped: {', '.join(skipped_files[:10])}", file=sys.stderr)
+                sys.exit(1)
+            print(f"Parsed {parsed_count} files, skipped {len(skipped_files)}", file=sys.stderr)
+        else:
+            # 単一ファイル
+            source = detect_and_parse_import(import_path)
+            if source is None:
+                print("Error: unsupported file format (JSON with mapping/chat_messages/messages required)",
+                      file=sys.stderr)
+                sys.exit(1)
+            if cutoff_ms:
+                source["messages"] = [m for m in source["messages"] if m.get("timestamp_ms", 0) >= cutoff_ms]
+            sources = [source]
     else:
         sources = [
             collect_claude_code(cutoff_ms, args.project),

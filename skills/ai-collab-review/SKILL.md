@@ -26,7 +26,7 @@ AIとの対話履歴から、必要な文脈を与え、探索を広げ、対話
 - 数値のみ → **日数フィルタ**（例: `30` → 過去30日分）
 - 文字列のみ → **プロジェクト名フィルタ**（部分一致）
 - 文字列 + 数値 → **プロジェクト名** + **日数フィルタ**
-- ファイルパス → **手動入力モード**（ChatGPT/Claude.ai エクスポートファイル）
+- ファイルパスまたはディレクトリパス → **手動入力モード**（ChatGPT/Claude.ai/Gemini エクスポート。ディレクトリ指定で一括読込）
 - 引数なし → 全プロジェクト横断、**過去30日**（デフォルト）
 - `0` または `all` → **全期間**
 
@@ -57,10 +57,14 @@ python "${CLAUDE_PLUGIN_ROOT}/scripts/collect.py" --output "${CLAUDE_PLUGIN_ROOT
 
 #### JSON ファイル（ChatGPT / Claude.ai / Gemini）
 
-collect.py のインポート機能を使用する。フォーマットは自動判定される:
+collect.py のインポート機能を使用する。ファイルパスまたはディレクトリパスを指定でき、フォーマットは自動判定される:
 
 ```bash
+# 単一ファイル
 python "${CLAUDE_PLUGIN_ROOT}/scripts/collect.py" --import-file /path/to/conversations.json --output "${CLAUDE_PLUGIN_ROOT}/.ai-collab-review-data.json"
+
+# ディレクトリ（中の .json ファイルを再帰的に一括読込）
+python "${CLAUDE_PLUGIN_ROOT}/scripts/collect.py" --import-file /path/to/export_dir/ --output "${CLAUDE_PLUGIN_ROOT}/.ai-collab-review-data.json"
 ```
 
 対応フォーマット:
