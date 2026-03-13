@@ -27,7 +27,8 @@ AIとの対話履歴から、必要な文脈を与え、探索を広げ、対話
 - 文字列のみ → **プロジェクト名フィルタ**（部分一致）
 - 文字列 + 数値 → **プロジェクト名** + **日数フィルタ**
 - ファイルパス → **手動入力モード**（ChatGPT/Claude.ai エクスポートファイル）
-- 引数なし → 全プロジェクト横断、**全期間**（デフォルト）
+- 引数なし → 全プロジェクト横断、**過去30日**（デフォルト）
+- `0` または `all` → **全期間**
 
 ---
 
@@ -38,14 +39,17 @@ AIとの対話履歴から、必要な文脈を与え、探索を広げ、対話
 プラグイン内蔵の collect.py を使用する:
 
 ```bash
-python "${CLAUDE_PLUGIN_ROOT}/scripts/collect.py" --days 0 > /tmp/ai-collab-review-data.json
+python "${CLAUDE_PLUGIN_ROOT}/scripts/collect.py" --output "${CLAUDE_PLUGIN_ROOT}/.ai-collab-review-data.json"
 ```
 
 引数に応じてオプションを変更:
-- 引数なし → `--days 0`（全期間、デフォルト）
-- 数値（例: `30`） → `--days 30`
-- 文字列（例: `yonshogen`） → `--project yonshogen --days 0`
+- 引数なし → オプションなし（デフォルト: 過去30日）
+- 数値（例: `7`） → `--days 7`
+- `0` または `all` → `--days 0`（全期間）
+- 文字列（例: `yonshogen`） → `--project yonshogen`
 - 文字列 + 数値 → `--project NAME --days N`
+
+収集完了後、`${CLAUDE_PLUGIN_ROOT}/.ai-collab-review-data.json` を Read で読み込む。分析完了後に削除する。
 
 ### 1-B. 手動入力（エクスポートファイル）
 
@@ -110,6 +114,8 @@ python "${CLAUDE_PLUGIN_ROOT}/scripts/collect.py" --days 0 > /tmp/ai-collab-revi
 - プロジェクトが切り替わっている
 - 話題が明確に変わっている
 
+**タイムスタンプ精度の考慮**: `timestamp_source` が `"file_mtime"` のメッセージは、同一ファイル内の複数メッセージが同一タイムスタンプになる。エピソード分割ではタイムスタンプ間隔の信頼度を下げ、プロジェクト切り替えや話題変化をより重視すること。
+
 ### 3-3. 仕事タイプ分類
 
 各エピソードを以下の5タイプに分類する:
@@ -127,6 +133,12 @@ python "${CLAUDE_PLUGIN_ROOT}/scripts/collect.py" --days 0 > /tmp/ai-collab-revi
 ### 3-4. 6軸+統制レイヤーで分析
 
 [references/evaluation-framework.md](references/evaluation-framework.md) を読み込み、6軸+統制レイヤーで分析する。
+
+**データ品質に基づく confidence 補正**:
+- `has_assistant_messages: false` のソースが大半の場合、**対話操舵力**の confidence を最大でも「中」に制限する（AIの返答が見えない状態では操舵の質を直接観測できないため）
+- `timestamp_source: "file_mtime"` が支配的なデータでは、セクション10「成長の軌跡」の confidence を「低」にする
+- `source_type: "auto_summary"` のメッセージ（Windsurf）は6軸スコアリングの直接証拠としては使わず、補助的なコンテキストとして参照する
+- `project_filter_unsupported` にリストされたソースからのデータがある場合、プロジェクトフィルタの精度が不完全であることをレポートに注記する
 
 各軸 0〜4 で採点する:
 
