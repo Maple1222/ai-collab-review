@@ -8,9 +8,9 @@
 
 ### エクスポート手順
 1. ChatGPT にログイン
-2. Settings > Data controls > Export data
+2. プロフィールアイコン → 設定 → データコントロール → Export data
 3. 「Export」をクリック
-4. メールに届く ZIP をダウンロード
+4. メールに届く ZIP をダウンロード（**リンクは24時間で失効**）
 5. ZIP を展開し、中の `conversations.json` を使う
 
 ### データ構造（conversations.json）
@@ -68,11 +68,13 @@
 ## Claude.ai エクスポート
 
 ### エクスポート手順（公式機能あり）
-1. Claude.ai にログイン
-2. Settings > Privacy > Export data
+1. Claude.ai にログイン（Web または Claude Desktop。**iOS/Android からは実行不可**）
+2. Settings → Privacy → Export data
 3. 「Export data」をクリック
 4. **メールに届くダウンロードリンク（24時間で失効）** からZIPをダウンロード
 5. ZIP 内の `conversations.json` を使う
+
+> **注**: 上記は個人アカウント向けの手順です。Team / Enterprise の組織データエクスポートは **Organization settings → Data and Privacy → Export Data** から行います。
 
 ### データ構造（conversations.json）
 ```json
@@ -137,12 +139,12 @@
 ### エクスポート手順（Google Takeout）
 1. https://takeout.google.com/ にアクセス
 2. 「すべての選択を解除」で全データの選択を外す
-3. **「マイ アクティビティ」** セクション内の **「Gemini Apps」** を選択する
-4. 「次のステップ」→ エクスポートを作成
-5. メールにダウンロードリンクが届く（処理に2時間〜数日かかる場合がある）
+3. **「マイ アクティビティ」** → 「All activity data included」→ **「Gemini Apps」** を選択する
+4. 「次のステップ」→ 配信方法を選択（メールリンク / Google Drive / Dropbox / OneDrive / Box）→ エクスポートを作成
+5. 配信先にダウンロードリンクまたはファイルが届く（メールリンクは**7日間で失効**。処理に2時間〜数日かかる場合がある）
 6. ZIP/TGZ内のJSONファイルを使う
 
-> **重要**: 「Gemini」カテゴリ（Gemini Gems用）ではなく、**「マイ アクティビティ」内の「Gemini Apps」** を選ぶこと。間違えると空のHTMLが出力される。
+> **重要**: 「Gemini」カテゴリは Gemini Gems 用のデータです。チャット履歴を取得するには **「マイ アクティビティ」内の「Gemini Apps」** を選んでください。
 
 ### データ構造
 ```json
@@ -294,16 +296,19 @@ collect.py が見つからず、ファイルパスも指定されていない場
 ```
 AI対話履歴のデータが必要です。以下のいずれかの方法でデータを用意してください:
 
-1. **ChatGPT**: Settings > Data controls > Export data でエクスポートし、
-   ZIP 内の `conversations.json` のパスを教えてください。
-
-2. **Claude.ai**: Settings > Privacy > Export data でエクスポートし、
-   ZIP 内の `conversations.json` のパスを教えてください。
+1. **ChatGPT**: プロフィールアイコン → 設定 → データコントロール → Export data
+   でエクスポートし、ZIP 内の `conversations.json` のパスを教えてください。
    （ダウンロードリンクは24時間で失効します）
 
+2. **Claude.ai**: Settings → Privacy → Export data でエクスポートし、
+   ZIP 内の `conversations.json` のパスを教えてください。
+   （個人アカウント向け。Team/Enterprise は Organization settings → Data and Privacy。
+   リンクは24時間で失効。iOS/Android からは実行不可）
+
 3. **Gemini**: Google Takeout (https://takeout.google.com/) で
-   「マイ アクティビティ」>「Gemini Apps」をエクスポートしてください。
-   ※「Gemini」カテゴリではなく「Gemini Apps」を選ぶこと
+   「すべての選択を解除」→「マイ アクティビティ」→「Gemini Apps」を選択して
+   エクスポートしてください。
+   ※「Gemini」は Gems 用です。チャット履歴には「Gemini Apps」を選んでください
 
 4. **Markdown/テキスト**: 対話をMarkdownやテキストファイルに保存し、
    そのパス（ファイルまたはディレクトリ）を教えてください。

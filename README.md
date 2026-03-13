@@ -60,13 +60,13 @@ prompt-review がエンジニアの技術的な深さ（技術理解度、コー
 
 | ソース | 取得方法 | ファイル形式 |
 |--------|---------|------------|
-| ChatGPT | Settings > Data controls > Export data | `conversations.json`（ZIP内） |
-| Claude.ai | Settings > Privacy > Export data | `conversations.json`（ZIP内、リンク24h失効） |
-| Gemini | Google Takeout > **マイ アクティビティ > Gemini Apps** | JSON（ZIP/TGZ内） |
+| ChatGPT | プロフィールアイコン → 設定 → データコントロール → Export data | `conversations.json`（ZIP内、リンク24h失効） |
+| Claude.ai | Settings → Privacy → Export data（個人アカウント） | `conversations.json`（ZIP内、リンク24h失効） |
+| Gemini | Google Takeout → すべて解除 → マイ アクティビティ → **Gemini Apps** | JSON（ZIP/TGZ内、リンク7日失効） |
 | Markdown | Obsidian Vault 等の対話アーカイブ | `### **User** (timestamp)` 形式等 |
 | その他 | テキストファイルにコピー&ペースト | `Human:` / `User:` プレフィックス |
 
-> **Gemini注意**: Takeoutで「Gemini」カテゴリではなく「**マイ アクティビティ > Gemini Apps**」を選ぶこと。間違えると空のHTMLが出力される。
+> **Gemini注意**: Takeoutの「Gemini」カテゴリは Gems 用データです。チャット履歴を取得するには「**マイ アクティビティ > Gemini Apps**」を選んでください。
 
 ディレクトリパスを渡せば、中のファイルを一括で読み込める:
 ```bash
