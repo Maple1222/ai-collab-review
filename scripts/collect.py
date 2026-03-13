@@ -531,6 +531,164 @@ def collect_antigravity(cutoff_ms, project_filter=None) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# 手動インポートパーサー
+# ---------------------------------------------------------------------------
+def parse_chatgpt_export(file_path: Path) -> dict:
+    """ChatGPT conversations.json をパースする（user + assistant 両方）"""
+    result = {"tool": "ChatGPT（手動インポート）", "status": "未検出", "messages": [], "period": "",
+              "project_filter_support": "full", "has_assistant_messages": True}
+    with open(file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    if not isinstance(data, list):
+        return result
+
+    for conv in data:
+        title = conv.get("title", "unknown")
+        mapping = conv.get("mapping", {})
+        for node in mapping.values():
+            msg = node.get("message")
+            if msg is None:
+                continue
+            role = msg.get("author", {}).get("role", "")
+            if role not in ("user", "assistant"):
+                continue
+            content = msg.get("content", {})
+            if content.get("content_type") != "text":
+                continue
+            parts = content.get("parts", [])
+            text = " ".join(str(p) for p in parts if isinstance(p, str)).strip()
+            if not text:
+                continue
+            create_time = msg.get("create_time")
+            if create_time:
+                ts_ms = int(float(create_time) * 1000)
+                ts_display = ts_to_iso(ts_ms)
+            else:
+                ts_ms = 0
+                ts_display = "unknown"
+            result["messages"].append({
+                "text": sanitize_text(text),
+                "role": "user" if role == "user" else "assistant",
+                "timestamp": ts_display,
+                "timestamp_ms": ts_ms,
+                "project": title,
+                "timestamp_source": "message",
+            })
+
+    if result["messages"]:
+        result["status"] = "インポート済み"
+        timestamps = [m["timestamp"] for m in result["messages"] if m["timestamp"] != "unknown"]
+        if timestamps:
+            result["period"] = f"{min(timestamps)} 〜 {max(timestamps)}"
+    return result
+
+
+def parse_claude_ai_export(file_path: Path) -> dict:
+    """Claude.ai conversations.json をパースする（user + assistant 両方）"""
+    result = {"tool": "Claude.ai（手動インポート）", "status": "未検出", "messages": [], "period": "",
+              "project_filter_support": "full", "has_assistant_messages": True}
+    with open(file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    if not isinstance(data, list):
+        return result
+
+    for conv in data:
+        name = conv.get("name", "unknown")
+        for chat_msg in conv.get("chat_messages", []):
+            sender = chat_msg.get("sender", "")
+            if sender not in ("human", "assistant"):
+                continue
+            text = chat_msg.get("text", "").strip()
+            if not text:
+                continue
+            created_at = chat_msg.get("created_at", "")
+            ts_ms = iso_to_ms(created_at) if created_at else None
+            result["messages"].append({
+                "text": sanitize_text(text),
+                "role": "user" if sender == "human" else "assistant",
+                "timestamp": ts_to_iso(ts_ms) if ts_ms else "unknown",
+                "timestamp_ms": ts_ms or 0,
+                "project": name,
+                "timestamp_source": "message",
+            })
+
+    if result["messages"]:
+        result["status"] = "インポート済み"
+        timestamps = [m["timestamp"] for m in result["messages"] if m["timestamp"] != "unknown"]
+        if timestamps:
+            result["period"] = f"{min(timestamps)} 〜 {max(timestamps)}"
+    return result
+
+
+def parse_gemini_export(file_path: Path) -> dict:
+    """Gemini エクスポート JSON をパースする（user + model 両方）"""
+    result = {"tool": "Gemini（手動インポート）", "status": "未検出", "messages": [], "period": "",
+              "project_filter_support": "none", "has_assistant_messages": True}
+    with open(file_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # 単一会話 or 会話リスト
+    conversations = data if isinstance(data, list) else [data]
+
+    for conv in conversations:
+        conv_time = conv.get("createdTime", "")
+        ts_base = iso_to_ms(conv_time) if conv_time else None
+        conv_id = conv.get("id", "unknown")
+        for msg in conv.get("messages", []):
+            role = msg.get("role", "")
+            if role not in ("user", "model"):
+                continue
+            if msg.get("isThought"):
+                continue
+            parts = msg.get("parts", [])
+            text = " ".join(p.get("text", "") for p in parts if isinstance(p, dict) and "text" in p).strip()
+            if not text:
+                continue
+            result["messages"].append({
+                "text": sanitize_text(text),
+                "role": "user" if role == "user" else "assistant",
+                "timestamp": ts_to_iso(ts_base) if ts_base else "unknown",
+                "timestamp_ms": ts_base or 0,
+                "project": conv_id[:12],
+                "timestamp_source": "message" if ts_base else "unknown",
+            })
+
+    if result["messages"]:
+        result["status"] = "インポート済み"
+        timestamps = [m["timestamp"] for m in result["messages"] if m["timestamp"] != "unknown"]
+        if timestamps:
+            result["period"] = f"{min(timestamps)} 〜 {max(timestamps)}"
+    return result
+
+
+def detect_and_parse_import(file_path: Path) -> dict:
+    """ファイルのフォーマットを自動判定してパースする"""
+    with open(file_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError:
+        return None  # JSON でなければ SKILL.md の LLM パースにフォールバック
+
+    # ChatGPT: mapping キーを持つ会話配列
+    if isinstance(data, list) and data and "mapping" in data[0]:
+        return parse_chatgpt_export(file_path)
+    # Claude.ai: chat_messages キーを持つ会話配列
+    if isinstance(data, list) and data and "chat_messages" in data[0]:
+        return parse_claude_ai_export(file_path)
+    # Gemini: messages キーを持つ
+    if isinstance(data, dict) and "messages" in data:
+        return parse_gemini_export(file_path)
+    if isinstance(data, list) and data and "messages" in data[0]:
+        return parse_gemini_export(file_path)
+
+    return None
+
+
+# ---------------------------------------------------------------------------
 # メイン
 # ---------------------------------------------------------------------------
 def main():
@@ -539,6 +697,8 @@ def main():
     parser.add_argument("--project", type=str, default=None, help="プロジェクト名でフィルタ（部分一致）")
     parser.add_argument("--output", type=str, default=None,
                         help="出力先ファイルパス（省略時は標準出力）")
+    parser.add_argument("--import-file", type=str, default=None,
+                        help="エクスポートファイルをインポート（ChatGPT/Claude.ai/Gemini JSON）")
     args = parser.parse_args()
 
     cutoff_ms = None
@@ -546,17 +706,32 @@ def main():
         cutoff_dt = datetime.now(tz=timezone.utc) - timedelta(days=args.days)
         cutoff_ms = int(cutoff_dt.timestamp() * 1000)
 
-    sources = [
-        collect_claude_code(cutoff_ms, args.project),
-        collect_copilot_chat(cutoff_ms, args.project),
-        collect_cline(cutoff_ms, args.project),
-        collect_roo_code(cutoff_ms, args.project),
-        collect_windsurf(cutoff_ms, args.project),
-        collect_antigravity(cutoff_ms, args.project),
-    ]
+    # インポートモード
+    if args.import_file:
+        import_path = Path(args.import_file)
+        if not import_path.exists():
+            print(f"Error: file not found: {args.import_file}", file=sys.stderr)
+            sys.exit(1)
+        source = detect_and_parse_import(import_path)
+        if source is None:
+            print("Error: unsupported file format", file=sys.stderr)
+            sys.exit(1)
+        # cutoff フィルタ
+        if cutoff_ms:
+            source["messages"] = [m for m in source["messages"] if m.get("timestamp_ms", 0) >= cutoff_ms]
+        sources = [source]
+    else:
+        sources = [
+            collect_claude_code(cutoff_ms, args.project),
+            collect_copilot_chat(cutoff_ms, args.project),
+            collect_cline(cutoff_ms, args.project),
+            collect_roo_code(cutoff_ms, args.project),
+            collect_windsurf(cutoff_ms, args.project),
+            collect_antigravity(cutoff_ms, args.project),
+        ]
 
     total_messages = sum(len(s["messages"]) for s in sources)
-    detected = [s["tool"] for s in sources if s["status"] == "検出"]
+    detected = [s["tool"] for s in sources if s["status"] in ("検出", "インポート済み")]
 
     # project_filter 非対応ソースの警告
     unfiltered_sources = []
