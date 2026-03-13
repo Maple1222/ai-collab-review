@@ -1,6 +1,6 @@
 {
   "name": "ai-collab-review",
-  "description": "AI collaboration proficiency analyzer. Evaluates how effectively you work with AI through 5 axes: purpose design, context supply, dialogue steering, verification & adoption, and learning asset creation. Works with Claude Code, GitHub Copilot, Cline, Roo Code, Windsurf, Antigravity logs, and manual exports from ChatGPT/Claude.ai/Gemini.",
+  "description": "AI collaboration proficiency analyzer. Evaluates how effectively you work with AI through 5 axes: purpose design, context supply, verification & adoption, dialogue steering, and learning asset creation. Works with Claude Code, GitHub Copilot, Cline, Roo Code, Windsurf, Antigravity logs, and manual exports from ChatGPT/Claude.ai/Gemini.",
   "version": "1.0.0",
   "author": {
     "name": "Maple1222",
