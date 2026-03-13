@@ -1,0 +1,28 @@
+{
+  "id": "gemini-conv-001",
+  "createdTime": "2025-01-15T09:00:00Z",
+  "lastModifiedTime": "2025-01-15T09:30:00Z",
+  "messages": [
+    {
+      "role": "user",
+      "parts": [{"text": "東京の天気を教えて"}]
+    },
+    {
+      "role": "model",
+      "parts": [{"text": "東京の現在の天気は晴れです"}]
+    },
+    {
+      "role": "user",
+      "parts": [{"text": "ありがとう、明日は？"}]
+    },
+    {
+      "role": "model",
+      "isThought": true,
+      "parts": [{"text": "internal reasoning..."}]
+    },
+    {
+      "role": "model",
+      "parts": [{"text": "明日は曇りの予報です"}]
+    }
+  ]
+}
