@@ -76,7 +76,7 @@ prompt-review がエンジニアの技術的な深さ（技術理解度、コー
 ## インストール
 
 ```bash
-claude plugin add github:touji/ai-collab-review
+claude plugin add github:Maple1222/ai-collab-review
 ```
 
 ## 使い方

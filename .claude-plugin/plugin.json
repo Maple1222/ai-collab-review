@@ -3,10 +3,10 @@
   "description": "AI collaboration proficiency analyzer. Evaluates how effectively you work with AI through 6 axes: purpose design, context supply, exploration expansion, dialogue steering, verification & adoption, and learning asset creation. Works with Claude Code, GitHub Copilot, Cline, Roo Code, Windsurf, Antigravity logs, and manual exports from ChatGPT/Claude.ai/Gemini.",
   "version": "1.0.0",
   "author": {
-    "name": "touji",
-    "url": "https://github.com/touji"
+    "name": "Maple1222",
+    "url": "https://github.com/Maple1222"
   },
-  "repository": "https://github.com/touji/ai-collab-review",
+  "repository": "https://github.com/Maple1222/ai-collab-review",
   "license": "MIT",
   "keywords": [
     "ai-collaboration",
