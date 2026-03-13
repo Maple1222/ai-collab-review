@@ -94,6 +94,11 @@ claude plugin add github:Maple1222/ai-collab-review
 /ai-collab-review ~/Downloads/conversations.json
 ```
 
+collect.py を直接使う場合:
+```bash
+python scripts/collect.py --import-file ~/Downloads/conversations.json --output data.json
+```
+
 レポートは `reports/ai-collab-review-YYYY-MM-DD.md` に出力されます。
 
 ### 大規模データの自動処理

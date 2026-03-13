@@ -55,14 +55,29 @@ python "${CLAUDE_PLUGIN_ROOT}/scripts/collect.py" --output "${CLAUDE_PLUGIN_ROOT
 
 ファイルパスが引数に渡された場合:
 
-1. 指定されたファイルを Read で読み込む
-2. 以下のフォーマットを自動判定し、**ユーザーとアシスタント両方のメッセージを抽出する**（対話操舵力の評価にはAIの返答も必要なため）:
-   - **ChatGPT エクスポート** (`conversations.json`): `mapping` 内の `author.role` が `"user"` または `"assistant"` を抽出（`"system"` はスキップ）
-   - **Claude.ai エクスポート**: `chat_messages` 内の `sender` が `"human"` または `"assistant"` を抽出
-   - **Gemini エクスポート**: `messages` 内の `role` が `"user"` または `"model"` を抽出（`isThought: true` はスキップ）
-   - **テキスト/Markdown**: `Human:` / `User:` / `私:` 等のプレフィックスでユーザー、`Assistant:` / `AI:` / `Claude:` / `ChatGPT:` 等でアシスタントを判定し、両方抽出
-   - **JSONL**: 1行1JSONで `role` が `"user"` / `"assistant"` の両方を抽出
-3. 抽出結果を collect.py と同じJSON構造に正規化する（各メッセージに `role` フィールドを付与）
+#### JSON ファイル（ChatGPT / Claude.ai / Gemini）
+
+collect.py のインポート機能を使用する。フォーマットは自動判定される:
+
+```bash
+python "${CLAUDE_PLUGIN_ROOT}/scripts/collect.py" --import-file /path/to/conversations.json --output "${CLAUDE_PLUGIN_ROOT}/.ai-collab-review-data.json"
+```
+
+対応フォーマット:
+- **ChatGPT エクスポート** (`conversations.json`): `mapping` 構造を自動検出
+- **Claude.ai エクスポート** (`conversations.json`): `chat_messages` 構造を自動検出
+- **Gemini エクスポート**: `messages` 構造を自動検出
+
+いずれもユーザー・アシスタント両方のメッセージを `role` フィールド付きで抽出する。
+
+#### テキスト / Markdown / JSONL
+
+構造が不定形のため、Read で読み込み LLM が解析する:
+- **テキスト/Markdown**: `Human:` / `User:` / `私:` 等のプレフィックスでユーザー、`Assistant:` / `AI:` / `Claude:` / `ChatGPT:` 等でアシスタントを判定し、両方抽出
+- **JSONL**: 1行1JSONで `role` が `"user"` / `"assistant"` の両方を抽出
+- 抽出結果を collect.py と同じJSON構造に正規化する（各メッセージに `role` フィールドを付与）
+
+#### データなしの場合
 
 ファイルもなく collect.py もない場合は、[references/manual-import-guide.md](references/manual-import-guide.md) を参照してユーザーにデータ取得方法を案内する。
 
