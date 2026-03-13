@@ -1,11 +1,11 @@
 ---
 name: ai-collab-review
 description: >
-  AIとの対話履歴を分析し、協働プロフィール（6軸+統制レイヤー）を評価してレポートを生成するスキル。
+  AIとの対話履歴を分析し、協働プロフィール（5軸+統制レイヤー）を評価してレポートを生成するスキル。
   「AI協働レビューして」「対話の使い方を分析して」「プロンプト力を診断して」「AIとの付き合い方を見て」
   と依頼されたとき、または /ai-collab-review で呼び出されたときに使用する。
   エンジニアだけでなく一般ユーザーの AI 活用力も評価できる。
-  対話履歴から「文脈を渡す力」「探索を広げる力」「対話を操舵する力」「検証して採る力」
+  対話履歴から「目的を定める力」「文脈を渡す力」「対話を操舵する力」「検証して採る力」
   「AI環境を自分で進化させる力」を見る。単なるプロンプト添削ではなく、AI協働の全体像を診断する。
   ChatGPT/Claude.ai/Gemini のエクスポートファイルにも対応しているため、
   非エンジニアのユーザーでも利用できる。
@@ -13,7 +13,7 @@ description: >
 
 # AI協働レビュー
 
-AIとの対話履歴から、必要な文脈を与え、探索を広げ、対話を操舵し、必要な場面で委任境界と承認点を設計し、最後に検証して採否を決める力を評価する。
+AIとの対話履歴から、目的を定め、必要な文脈を与え、対話を操舵し、必要な場面で委任境界と承認点を設計し、最後に検証して採否を決める力を評価する。
 
 レポートは日本語で `reports/ai-collab-review-YYYY-MM-DD.md` に書き出す。
 
@@ -149,14 +149,14 @@ python "${CLAUDE_PLUGIN_ROOT}/scripts/collect.py" --import-file /path/to/export_
 
 この分類は採点しない。軸スコアの文脈化に使う。
 
-### 3-4. 6軸+統制レイヤーで分析
+### 3-4. 5軸+統制レイヤーで分析
 
-[references/evaluation-framework.md](references/evaluation-framework.md) を読み込み、6軸+統制レイヤーで分析する。
+[references/evaluation-framework.md](references/evaluation-framework.md) を読み込み、5軸+統制レイヤーで分析する。
 
 **データ品質に基づく confidence 補正**:
 - `has_assistant_messages: false` のソースが大半の場合、**対話操舵力**の confidence を最大でも「中」に制限する（AIの返答が見えない状態では操舵の質を直接観測できないため）
 - `timestamp_source: "file_mtime"` が支配的なデータでは、セクション10「成長の軌跡」の confidence を「低」にする
-- `source_type: "auto_summary"` のメッセージ（Windsurf）は6軸スコアリングの直接証拠としては使わず、補助的なコンテキストとして参照する
+- `source_type: "auto_summary"` のメッセージ（Windsurf）は5軸スコアリングの直接証拠としては使わず、補助的なコンテキストとして参照する
 - `project_filter_unsupported` にリストされたソースからのデータがある場合、プロジェクトフィルタの精度が不完全であることをレポートに注記する
 
 各軸 0〜4 で採点する:
@@ -184,7 +184,7 @@ python "${CLAUDE_PLUGIN_ROOT}/scripts/collect.py" --import-file /path/to/export_
 3. **シークレット/リスク警告** — secret_warnings がある場合のみ
 4. **仕事タイプの傾向** — 5分類の分布。非採点
 5. **エピソードサマリー** — 代表的なエピソードの概要
-6. **AI協働プロフィール** — 6軸のスコア・confidence・解説・エビデンス引用
+6. **AI協働プロフィール** — 5軸のスコア・confidence・解説・エビデンス引用
 7. **統制レイヤー所見** — 条件付き評価
 8. **強い協働パターン** — ポジティブで再利用可能な形で記述
 9. **詰まりやすいパターン** — 改善可能な行動として記述（責める口調にしない）
@@ -215,6 +215,6 @@ Write ツールで `reports/ai-collab-review-YYYY-MM-DD.md` に書き出す。
 
 ## 参照リソース
 
-- **[references/evaluation-framework.md](references/evaluation-framework.md)** — 6軸+統制レイヤーの詳細な評価基準
+- **[references/evaluation-framework.md](references/evaluation-framework.md)** — 5軸+統制レイヤーの詳細な評価基準
 - **[references/report-template.md](references/report-template.md)** — レポートの構造テンプレート
 - **[references/manual-import-guide.md](references/manual-import-guide.md)** — 手動データインポートの詳細ガイド
