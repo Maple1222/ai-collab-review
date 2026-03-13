@@ -1,0 +1,16 @@
+# Generated reports (contain personal data)
+reports/
+
+# Temporary analysis files
+*.tmp
+chunk*.json
+*-data.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
