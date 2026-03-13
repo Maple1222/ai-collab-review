@@ -51,15 +51,17 @@
 ### 抽出ルール
 - `mapping` 内の各エントリを走査
 - `message` が `null` のエントリはスキップ（システムノード）
-- `message.author.role === "user"` のみ抽出
+- `message.author.role` が `"user"` または `"assistant"` のメッセージを抽出（両方必要）
+- `message.author.role === "system"` はスキップ
 - `message.content.parts` を結合してテキスト化（`content_type` が `"text"` のもの）
 - `create_time` は **Unix秒**（ミリ秒ではない）。ISO 8601 に変換してタイムスタンプとする
 - `title` をプロジェクト名として使う
+- 各メッセージに `role` フィールド（`"user"` or `"assistant"`）を付与する
 
 ### 注意点
 - `mapping` はツリー構造（`parent`/`children`フィールドあり）だが、分析用には全メッセージをフラットに展開してよい
 - DALL-E等の画像生成メッセージは `content_type` が `"text"` 以外の場合がある。テキスト以外はスキップ
-- `author.role === "system"` のメッセージもスキップ
+- `author.role === "tool"` のメッセージもスキップ（Code Interpreter等のツール実行結果）
 
 ---
 
@@ -117,10 +119,11 @@
 ### 抽出ルール
 - トップレベルは会話の配列
 - 各会話の `chat_messages` 配列を走査
-- `sender === "human"` のみ抽出
+- `sender` が `"human"` または `"assistant"` のメッセージを抽出（両方必要）
 - `text` フィールドをメッセージ本文とする
 - `created_at` はISO 8601形式
 - `name` をプロジェクト名として使う
+- 各メッセージに `role` フィールドを付与する（`"human"` → `"user"`、`"assistant"` → `"assistant"`）
 
 ### 注意点
 - ダウンロードリンクは**24時間で失効**する
@@ -166,9 +169,10 @@
 
 ### 抽出ルール
 - `messages` 配列を走査
-- `role === "user"` のみ抽出
+- `role` が `"user"` または `"model"` のメッセージを抽出（両方必要）
 - `parts` 配列内の `text` フィールドを結合してテキスト化
 - `createdTime` をタイムスタンプとする（ISO 8601形式）
+- 各メッセージに `role` フィールドを付与する（`"model"` → `"assistant"`、`"user"` → `"user"`）
 
 ### 注意点
 - エクスポート処理に時間がかかることがある（大量データで数日）
@@ -204,16 +208,18 @@ AIの回答
 ```
 
 ### 抽出ルール
-- `### **User**` で始まるセクションのみ抽出
+- `### **User**` で始まるセクションと `### **Assistant**` / `### **Claude**` / `### **ChatGPT**` で始まるセクションの両方を抽出
 - 括弧内のタイムスタンプ `(YYYY-MM-DD HH:MM:SS)` を取得
 - `---` で区切られた次のセクションまでがメッセージ本文
-- `### **Claude**` / `### **Assistant**` / `### **ChatGPT**` はAI側なのでスキップ
+- `### **User**` → `role: "user"`、それ以外（`### **Assistant**` / `### **Claude**` / `### **ChatGPT**`） → `role: "assistant"`
 
 ### 形式2: プレフィックス付きテキスト
 
 以下のプレフィックスで話者を判定:
 - ユーザー: `Human:`, `User:`, `私:`, `Q:`, `質問:`, `> ` (引用符)
 - AI: `Assistant:`, `AI:`, `Claude:`, `ChatGPT:`, `A:`, `回答:`
+
+ユーザー・AI両方のメッセージを抽出し、それぞれ `role: "user"` / `role: "assistant"` を付与する。
 
 ### フォールバック
 プレフィックスがない場合は、交互の発話として解釈（奇数行=ユーザー、偶数行=AI）。
@@ -226,7 +232,7 @@ AIの回答
 
 1. ディレクトリ内の全ファイルを走査（`.json`, `.md`, `.txt`）
 2. 各ファイルのフォーマットを自動判定
-3. すべてのファイルからユーザーメッセージを抽出・結合
+3. すべてのファイルからユーザー・アシスタント両方のメッセージを抽出・結合
 
 これにより、Obsidian Vault のような対話アーカイブディレクトリを一括分析できる。
 
@@ -252,8 +258,15 @@ AIの回答
       "status": "インポート済み",
       "messages": [
         {
-          "text": "メッセージ本文",
+          "text": "ユーザーのメッセージ",
+          "role": "user",
           "timestamp": "2025-01-01 00:00",
+          "project": "会話タイトル"
+        },
+        {
+          "text": "AIの回答",
+          "role": "assistant",
+          "timestamp": "2025-01-01 00:01",
           "project": "会話タイトル"
         }
       ],
@@ -264,6 +277,11 @@ AIの回答
   "secret_warnings": []
 }
 ```
+
+各メッセージの `role` フィールドは必ず `"user"` または `"assistant"` に正規化する（ソースごとの表記の違いを吸収する）:
+- ChatGPT: `"user"` / `"assistant"` → そのまま
+- Claude.ai: `"human"` → `"user"`、`"assistant"` → そのまま
+- Gemini: `"user"` → そのまま、`"model"` → `"assistant"`
 
 この構造により、自動収集と手動入力で同じ分析パイプラインを使える。
 
