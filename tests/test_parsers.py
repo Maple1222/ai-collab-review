@@ -1,4 +1,5 @@
 """手動インポートパーサーのテスト"""
+import json
 import sys
 from pathlib import Path
 
@@ -127,3 +128,44 @@ class TestDetectAndParseImport:
             assert result is None
         finally:
             tmp.unlink()
+
+
+class TestDirectoryImport:
+    """ディレクトリ一括読込のテスト"""
+
+    def test_parses_all_json_in_directory(self):
+        """fixtures ディレクトリ内の全 JSON を一括パース"""
+        results = []
+        for json_file in sorted(FIXTURES.rglob("*.json")):
+            source = collect.detect_and_parse_import(json_file)
+            if source and source["messages"]:
+                results.append(source)
+        # fixtures に chatgpt, claude_ai, gemini の3ファイルがある
+        assert len(results) == 3
+        tool_names = " ".join(r["tool"] for r in results)
+        assert "ChatGPT" in tool_names
+        assert "Claude.ai" in tool_names
+        assert "Gemini" in tool_names
+
+    def test_skips_non_parseable_files(self):
+        """パース不能な JSON はスキップされる"""
+        tmp = FIXTURES / "_test_invalid.json"
+        tmp.write_text('{"random_key": 123}', encoding="utf-8")
+        try:
+            source = collect.detect_and_parse_import(tmp)
+            assert source is None
+        finally:
+            tmp.unlink()
+
+    def test_directory_import_cli(self):
+        """CLI の --import-file でディレクトリを渡す E2E テスト"""
+        import subprocess
+        result = subprocess.run(
+            [sys.executable, str(Path(__file__).parent.parent / "scripts" / "collect.py"),
+             "--import-file", str(FIXTURES), "--days", "0"],
+            capture_output=True, encoding="utf-8"
+        )
+        assert result.returncode == 0
+        data = json.loads(result.stdout)
+        assert data["summary"]["total_messages"] > 0
+        assert len(data["sources"]) == 3
