@@ -13,7 +13,7 @@ AI協働レビュー データ収集スクリプト
   - Google Antigravity
 
 使い方:
-    python collect.py                          # 全プロジェクト、全期間
+    python collect.py                          # 全プロジェクト、過去30日（デフォルト）
     python collect.py --days 30                # 過去30日分
     python collect.py --project yonshogen      # 特定プロジェクト
     python collect.py --project yonshogen --days 30
@@ -72,8 +72,25 @@ def scan_secrets(text: str) -> list:
                 masked = matched[:8] + "***" + matched[-4:]
             else:
                 masked = matched[:4] + "***"
-            findings.append({"type": label, "masked_value": masked})
+            findings.append({
+                "type": label,
+                "masked_value": masked,
+                "start": match.start(),
+                "end": match.end(),
+            })
     return findings
+
+
+def redact_text(text: str) -> tuple:
+    """テキスト内のシークレットを検出し、マスク済みテキストとfindingsを返す"""
+    findings = scan_secrets(text)
+    if not findings:
+        return text, []
+    # 後ろから置換して位置ズレを防ぐ
+    redacted = text
+    for f in sorted(findings, key=lambda x: x["start"], reverse=True):
+        redacted = redacted[:f["start"]] + f["masked_value"] + redacted[f["end"]:]
+    return redacted, findings
 
 
 # ---------------------------------------------------------------------------
@@ -134,7 +151,8 @@ def extract_user_text(content) -> str:
 # ---------------------------------------------------------------------------
 def collect_claude_code(cutoff_ms, project_filter) -> dict:
     """Claude Code の history.jsonl およびプロジェクト別セッションファイルから収集"""
-    result = {"tool": "Claude Code", "status": "未検出", "messages": [], "period": ""}
+    result = {"tool": "Claude Code", "status": "未検出", "messages": [], "period": "",
+              "project_filter_support": "full", "has_assistant_messages": False}
     claude_dir = get_claude_dir()
     messages = []
     seen_texts = set()
@@ -186,6 +204,7 @@ def collect_claude_code(cutoff_ms, project_filter) -> dict:
                     "timestamp": ts_to_iso(timestamp) if timestamp else "unknown",
                     "timestamp_ms": timestamp or 0,
                     "project": Path(project).name if project else "unknown",
+                    "timestamp_source": "message",
                 })
 
     # ソース2: プロジェクト別セッションJSONL
@@ -261,6 +280,7 @@ def collect_claude_code(cutoff_ms, project_filter) -> dict:
                                 "timestamp": ts_display,
                                 "timestamp_ms": ts_ms or 0,
                                 "project": proj_name,
+                                "timestamp_source": "message" if ts_ms else "file_mtime",
                             })
                             msg_count += 1
                             if msg_count >= 100:
@@ -279,8 +299,10 @@ def collect_claude_code(cutoff_ms, project_filter) -> dict:
 
 
 def collect_copilot_chat(cutoff_ms, project_filter) -> dict:
-    """GitHub Copilot Chat の state.vscdb からプロンプトを収集"""
-    result = {"tool": "GitHub Copilot Chat", "status": "未検出", "messages": [], "period": ""}
+    """GitHub Copilot Chat の state.vscdb からプロンプトを収集
+    注意: project_filter はワークスペースハッシュしかないため非対応"""
+    result = {"tool": "GitHub Copilot Chat", "status": "未検出", "messages": [], "period": "",
+              "project_filter_support": "none", "has_assistant_messages": False}
     appdata = get_appdata_path()
     workspace_storage = appdata / "Code" / "User" / "workspaceStorage"
     if not workspace_storage.exists():
@@ -310,6 +332,7 @@ def collect_copilot_chat(cutoff_ms, project_filter) -> dict:
                                         "timestamp": ts_to_iso(file_mtime_ms),
                                         "timestamp_ms": file_mtime_ms,
                                         "project": vscdb_path.parent.name[:12],
+                                        "timestamp_source": "file_mtime",
                                     })
                 except (json.JSONDecodeError, AttributeError):
                     pass
@@ -326,9 +349,10 @@ def collect_copilot_chat(cutoff_ms, project_filter) -> dict:
     return result
 
 
-def collect_cline(cutoff_ms) -> dict:
+def collect_cline(cutoff_ms, project_filter=None) -> dict:
     """Cline の api_conversation_history.json からプロンプトを収集"""
-    result = {"tool": "Cline", "status": "未検出", "messages": [], "period": ""}
+    result = {"tool": "Cline", "status": "未検出", "messages": [], "period": "",
+              "project_filter_support": "none", "has_assistant_messages": False}
     appdata = get_appdata_path()
     tasks_dir = appdata / "Code" / "User" / "globalStorage" / "saoudrizwan.claude-dev" / "tasks"
     if not tasks_dir.exists():
@@ -360,6 +384,7 @@ def collect_cline(cutoff_ms) -> dict:
                         all_prompts.append({
                             "text": text[:500], "timestamp": ts_to_iso(file_mtime_ms),
                             "timestamp_ms": file_mtime_ms, "project": task_dir.name[:12],
+                            "timestamp_source": "file_mtime",
                         })
         except (json.JSONDecodeError, OSError):
             continue
@@ -373,9 +398,10 @@ def collect_cline(cutoff_ms) -> dict:
     return result
 
 
-def collect_roo_code(cutoff_ms) -> dict:
+def collect_roo_code(cutoff_ms, project_filter=None) -> dict:
     """Roo Code の会話履歴を収集"""
-    result = {"tool": "Roo Code", "status": "未検出", "messages": [], "period": ""}
+    result = {"tool": "Roo Code", "status": "未検出", "messages": [], "period": "",
+              "project_filter_support": "none", "has_assistant_messages": False}
     appdata = get_appdata_path()
     tasks_dir = appdata / "Code" / "User" / "globalStorage" / "RooVeterinaryInc.roo-cline" / "tasks"
     if not tasks_dir.exists():
@@ -407,6 +433,7 @@ def collect_roo_code(cutoff_ms) -> dict:
                         all_prompts.append({
                             "text": text[:500], "timestamp": ts_to_iso(file_mtime_ms),
                             "timestamp_ms": file_mtime_ms, "project": task_dir.name[:12],
+                            "timestamp_source": "file_mtime",
                         })
         except (json.JSONDecodeError, OSError):
             continue
@@ -420,9 +447,10 @@ def collect_roo_code(cutoff_ms) -> dict:
     return result
 
 
-def collect_windsurf(cutoff_ms) -> dict:
+def collect_windsurf(cutoff_ms, project_filter=None) -> dict:
     """Windsurf のメモリファイルを収集"""
-    result = {"tool": "Windsurf", "status": "未検出", "messages": [], "period": ""}
+    result = {"tool": "Windsurf", "status": "未検出", "messages": [], "period": "",
+              "project_filter_support": "partial", "has_assistant_messages": False}
     memories_dir = Path.home() / ".codeium" / "windsurf" / "memories"
     if not memories_dir.exists():
         return result
@@ -430,6 +458,9 @@ def collect_windsurf(cutoff_ms) -> dict:
     all_entries = []
     for mem_file in sorted(memories_dir.rglob("*"), key=lambda p: p.stat().st_mtime, reverse=True)[:20]:
         if not mem_file.is_file():
+            continue
+        proj_name = mem_file.parent.name
+        if project_filter and project_filter.lower() not in proj_name.lower():
             continue
         if cutoff_ms:
             file_mtime_ms = int(mem_file.stat().st_mtime * 1000)
@@ -441,7 +472,9 @@ def collect_windsurf(cutoff_ms) -> dict:
                 file_mtime_ms = int(mem_file.stat().st_mtime * 1000)
                 all_entries.append({
                     "text": text[:500], "timestamp": ts_to_iso(file_mtime_ms),
-                    "timestamp_ms": file_mtime_ms, "project": mem_file.parent.name,
+                    "timestamp_ms": file_mtime_ms, "project": proj_name,
+                    "timestamp_source": "file_mtime",
+                    "source_type": "auto_summary",
                     "note": "Cascadeの自動要約メモリ（元のプロンプトではない）",
                 })
         except (OSError, UnicodeDecodeError):
@@ -456,15 +489,19 @@ def collect_windsurf(cutoff_ms) -> dict:
     return result
 
 
-def collect_antigravity(cutoff_ms) -> dict:
+def collect_antigravity(cutoff_ms, project_filter=None) -> dict:
     """Google Antigravity のログを収集"""
-    result = {"tool": "Google Antigravity", "status": "未検出", "messages": [], "period": ""}
+    result = {"tool": "Google Antigravity", "status": "未検出", "messages": [], "period": "",
+              "project_filter_support": "partial", "has_assistant_messages": False}
     brain_dir = Path.home() / ".gemini" / "antigravity" / "brain"
     if not brain_dir.exists():
         return result
 
     all_entries = []
     for log_dir in brain_dir.glob("*/.system_generated/logs"):
+        proj_name = log_dir.parent.parent.name
+        if project_filter and project_filter.lower() not in proj_name.lower():
+            continue
         for log_file in sorted(log_dir.rglob("*"), key=lambda p: p.stat().st_mtime, reverse=True)[:10]:
             if not log_file.is_file() or log_file.suffix == ".pb":
                 continue
@@ -478,7 +515,8 @@ def collect_antigravity(cutoff_ms) -> dict:
                     file_mtime_ms = int(log_file.stat().st_mtime * 1000)
                     all_entries.append({
                         "text": text[:500], "timestamp": ts_to_iso(file_mtime_ms),
-                        "timestamp_ms": file_mtime_ms, "project": log_file.parent.parent.parent.name[:12],
+                        "timestamp_ms": file_mtime_ms, "project": proj_name[:12],
+                        "timestamp_source": "file_mtime",
                     })
             except (OSError, UnicodeDecodeError):
                 continue
@@ -497,8 +535,10 @@ def collect_antigravity(cutoff_ms) -> dict:
 # ---------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(description="AI対話履歴を収集・整形して出力する")
-    parser.add_argument("--days", type=int, default=0, help="過去N日分に限定（0=全期間、デフォルト: 0）")
+    parser.add_argument("--days", type=int, default=30, help="過去N日分に限定（0=全期間、デフォルト: 30）")
     parser.add_argument("--project", type=str, default=None, help="プロジェクト名でフィルタ（部分一致）")
+    parser.add_argument("--output", type=str, default=None,
+                        help="出力先ファイルパス（省略時は標準出力）")
     args = parser.parse_args()
 
     cutoff_ms = None
@@ -509,14 +549,21 @@ def main():
     sources = [
         collect_claude_code(cutoff_ms, args.project),
         collect_copilot_chat(cutoff_ms, args.project),
-        collect_cline(cutoff_ms),
-        collect_roo_code(cutoff_ms),
-        collect_windsurf(cutoff_ms),
-        collect_antigravity(cutoff_ms),
+        collect_cline(cutoff_ms, args.project),
+        collect_roo_code(cutoff_ms, args.project),
+        collect_windsurf(cutoff_ms, args.project),
+        collect_antigravity(cutoff_ms, args.project),
     ]
 
     total_messages = sum(len(s["messages"]) for s in sources)
     detected = [s["tool"] for s in sources if s["status"] == "検出"]
+
+    # project_filter 非対応ソースの警告
+    unfiltered_sources = []
+    if args.project:
+        for s in sources:
+            if s["status"] == "検出" and s.get("project_filter_support") in ("none", None):
+                unfiltered_sources.append(s["tool"])
 
     output = {
         "summary": {
@@ -525,15 +572,26 @@ def main():
             "filter_days": args.days if args.days > 0 else None,
             "filter_project": args.project,
             "collected_at": datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+            "project_filter_unsupported": unfiltered_sources if unfiltered_sources else None,
+            "sampling_limits": {
+                "text_truncation_chars": 500,
+                "claude_code_session_files": 50,
+                "claude_code_messages_per_session": 100,
+                "cline_roo_tasks": 20,
+                "windsurf_files": 20,
+                "antigravity_logs": 10,
+            },
         },
         "sources": sources,
     }
 
+    # シークレット検出 + 本文レダクション
     secret_warnings = []
     for source in sources:
         for msg in source["messages"]:
-            findings = scan_secrets(msg["text"])
+            redacted, findings = redact_text(msg["text"])
             if findings:
+                msg["text"] = redacted  # 本文自体をレダクト済みに置換
                 for f in findings:
                     secret_warnings.append({
                         "tool": source["tool"],
@@ -541,7 +599,7 @@ def main():
                         "timestamp": msg.get("timestamp", "unknown"),
                         "type": f["type"],
                         "masked_value": f["masked_value"],
-                        "prompt_excerpt": msg["text"][:80].replace("\n", " "),
+                        "prompt_excerpt": redacted[:80].replace("\n", " "),
                     })
     output["secret_warnings"] = secret_warnings
 
@@ -558,9 +616,16 @@ def main():
         for k, v in sorted(project_stats.items(), key=lambda x: -x[1]["count"])
     }
 
-    if sys.platform == "win32":
-        sys.stdout.reconfigure(encoding="utf-8")
-    json.dump(output, sys.stdout, ensure_ascii=False, indent=2)
+    if args.output:
+        out_path = Path(args.output)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(output, f, ensure_ascii=False, indent=2)
+        print(str(out_path), file=sys.stderr)
+    else:
+        if sys.platform == "win32":
+            sys.stdout.reconfigure(encoding="utf-8")
+        json.dump(output, sys.stdout, ensure_ascii=False, indent=2)
 
 
 if __name__ == "__main__":

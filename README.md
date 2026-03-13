@@ -82,8 +82,9 @@ claude plugin add github:Maple1222/ai-collab-review
 ## 使い方
 
 ```bash
-/ai-collab-review              # 全プロジェクト、全期間（デフォルト）
-/ai-collab-review 30           # 過去30日分
+/ai-collab-review              # 全プロジェクト、過去30日（デフォルト）
+/ai-collab-review 7            # 過去7日分
+/ai-collab-review 0            # 全期間
 /ai-collab-review yonshogen    # 特定プロジェクトのみ
 /ai-collab-review yonshogen 30 # 特定プロジェクト × 過去30日分
 ```
@@ -98,6 +99,21 @@ claude plugin add github:Maple1222/ai-collab-review
 ### 大規模データの自動処理
 
 2,000件を超えるメッセージがある場合、時間チャンクに分割してサブエージェント（`chunk-analyzer`）で並列分析し、結果を統合します。並列実行前にはユーザーに確認を取ります。
+
+### データ収集の制約
+
+collect.py はパフォーマンスとプライバシーのため、以下のサンプリング制限を適用します。全データの網羅的な分析ではなく、サンプリングされたデータに基づく評価です。
+
+| 制限 | 値 |
+|------|---|
+| メッセージテキスト | 先頭500文字 |
+| Claude Codeセッションファイル | 最新50件 |
+| Claude Codeメッセージ/セッション | 100件 |
+| Cline/Rooタスク | 最新20件 |
+| Windsurfファイル | 最新20件 |
+| Antigravityログ | 最新10件 |
+
+また、自動収集ではユーザーメッセージのみを収集します（AIの応答は含まれません）。手動インポート（ChatGPT/Claude.ai/Gemini エクスポート）ではユーザー・AI双方のメッセージを含むため、より精度の高い分析が可能です。
 
 ## レポートの構成（12セクション）
 

@@ -5,6 +5,7 @@ reports/
 *.tmp
 chunk*.json
 *-data.json
+.ai-collab-review-data.json
 
 # Python
 __pycache__/
