@@ -52,12 +52,13 @@ python "${CLAUDE_PLUGIN_ROOT}/scripts/collect.py" --days 0 > /tmp/ai-collab-revi
 ファイルパスが引数に渡された場合:
 
 1. 指定されたファイルを Read で読み込む
-2. 以下のフォーマットを自動判定:
-   - **ChatGPT エクスポート** (`conversations.json`): `mapping` 内の `author.role === "user"` を抽出
-   - **Claude.ai エクスポート**: `chat_messages` 内の `sender === "human"` を抽出
-   - **テキスト/Markdown**: `Human:` / `User:` / `私:` 等のプレフィックスで話者を判定
-   - **JSONL**: 1行1JSONで `role: "user"` / `type: "user"` を抽出
-3. 抽出結果を collect.py と同じJSON構造に正規化する
+2. 以下のフォーマットを自動判定し、**ユーザーとアシスタント両方のメッセージを抽出する**（対話操舵力の評価にはAIの返答も必要なため）:
+   - **ChatGPT エクスポート** (`conversations.json`): `mapping` 内の `author.role` が `"user"` または `"assistant"` を抽出（`"system"` はスキップ）
+   - **Claude.ai エクスポート**: `chat_messages` 内の `sender` が `"human"` または `"assistant"` を抽出
+   - **Gemini エクスポート**: `messages` 内の `role` が `"user"` または `"model"` を抽出（`isThought: true` はスキップ）
+   - **テキスト/Markdown**: `Human:` / `User:` / `私:` 等のプレフィックスでユーザー、`Assistant:` / `AI:` / `Claude:` / `ChatGPT:` 等でアシスタントを判定し、両方抽出
+   - **JSONL**: 1行1JSONで `role` が `"user"` / `"assistant"` の両方を抽出
+3. 抽出結果を collect.py と同じJSON構造に正規化する（各メッセージに `role` フィールドを付与）
 
 ファイルもなく collect.py もない場合は、[references/manual-import-guide.md](references/manual-import-guide.md) を参照してユーザーにデータ取得方法を案内する。
 
