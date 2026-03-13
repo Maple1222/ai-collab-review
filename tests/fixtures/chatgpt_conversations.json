@@ -1,0 +1,52 @@
+[
+  {
+    "title": "Test Conversation",
+    "create_time": 1700000000.0,
+    "update_time": 1700001000.0,
+    "mapping": {
+      "node-sys": {
+        "message": {
+          "id": "sys-1",
+          "author": {"role": "system"},
+          "content": {"content_type": "text", "parts": ["System prompt"]},
+          "create_time": 1700000000.0
+        }
+      },
+      "node-user-1": {
+        "message": {
+          "id": "user-1",
+          "author": {"role": "user"},
+          "content": {"content_type": "text", "parts": ["Hello, can you help me?"]},
+          "create_time": 1700000100.0
+        }
+      },
+      "node-assistant-1": {
+        "message": {
+          "id": "asst-1",
+          "author": {"role": "assistant"},
+          "content": {"content_type": "text", "parts": ["Of course! How can I help?"]},
+          "create_time": 1700000200.0
+        }
+      },
+      "node-user-2": {
+        "message": {
+          "id": "user-2",
+          "author": {"role": "user"},
+          "content": {"content_type": "text", "parts": ["My API key is sk-abc123456789012345678901234567890123"]},
+          "create_time": 1700000300.0
+        }
+      },
+      "node-null": {
+        "message": null
+      },
+      "node-image": {
+        "message": {
+          "id": "img-1",
+          "author": {"role": "user"},
+          "content": {"content_type": "image_asset_pointer", "parts": []},
+          "create_time": 1700000400.0
+        }
+      }
+    }
+  }
+]

@@ -1,0 +1,28 @@
+[
+  {
+    "uuid": "conv-001",
+    "name": "Claude Test Chat",
+    "created_at": "2025-08-21T10:38:16.293907Z",
+    "updated_at": "2025-08-21T10:40:00.000000Z",
+    "chat_messages": [
+      {
+        "uuid": "msg-001",
+        "text": "Pythonでリスト内包表記の書き方を教えて",
+        "sender": "human",
+        "created_at": "2025-08-21T10:38:18.136525Z",
+        "content": [{"type": "text", "text": "Pythonでリスト内包表記の書き方を教えて"}],
+        "attachments": [],
+        "files": []
+      },
+      {
+        "uuid": "msg-002",
+        "text": "リスト内包表記は [x for x in iterable] の形式で書きます",
+        "sender": "assistant",
+        "created_at": "2025-08-21T10:39:00.000000Z",
+        "content": [{"type": "text", "text": "リスト内包表記は [x for x in iterable] の形式で書きます"}],
+        "attachments": [],
+        "files": []
+      }
+    ]
+  }
+]
